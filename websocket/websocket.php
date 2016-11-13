@@ -147,4 +147,4 @@ class WS {
 }
 	
 
-new WS('localhost', 4000);
+new WS('127.0.0.1', 4000);
