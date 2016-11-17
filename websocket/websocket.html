@@ -24,6 +24,10 @@
         connection.onmessage = function (e) {
             console.log('Server: ' + e.data);
         };
+
+        setTimeout(function() {
+            connection.send('hello world');
+        }, 2000);
     </script>
 </body>
 

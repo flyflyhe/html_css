@@ -1,79 +1,38 @@
 <?php
 class WS 
 {
-	var $master;
-	var $sockets = array();
-	var $debug = true;
-	var $handshake = false;
+	private $debug = true;
+	private $handshake = false;
 
-	function __construct($address, $port)
+	function run($socket)
 	{
-		$this->master=socket_create(AF_INET, SOCK_STREAM, SOL_TCP)     or die("socket_create() failed");
-		socket_set_option($this->master, SOL_SOCKET, SO_REUSEADDR, 1)  or die("socket_option() failed");
-		socket_bind($this->master, $address, $port)                    or die("socket_bind() failed");
-		socket_listen($this->master,20)                                or die("socket_listen() failed");
-		
-		$this->sockets[] = $this->master;
-		$this->say("Server Started : ".date('Y-m-d H:i:s'));
-		$this->say("Listening on   : ".$address." port ".$port);
-		$this->say("Master socket  : ".$this->master."\n");
-		
 		while(true) {
-			$socketArr = $this->sockets;
-			$write = NULL;
-			$except = NULL;
-			socket_select($socketArr, $write, $except, NULL);  //自动选择来消息的socket 如果是握手 自动选择主机
-			foreach ($socketArr as $socket){
-				if ($socket == $this->master){  //主机
-					$client = socket_accept($this->master);
-					if ($client < 0){
-						$this->log("socket_accept() failed");
-						continue;
-					} else{
-						$this->connect($client);
-					}
-				} else {
-					$this->log("^^^^");
-					$bytes = @socket_recv($socket,$buffer,2048,0);
-					$this->log("^^^^");
-					if ($bytes == 0){
-						$this->disConnect($socket);
-					} else {
-						if (!$this->handshake){
-							$this->doHandShake($socket, $buffer);
-						} else {
-							$buffer = $this->decode($buffer);
-							$this->send($socket, $buffer); 
-						}
-					}
-				}
-			}
-		}
+            $buffer = $bytes = @stream_socket_recvfrom($socket, 2048, STREAM_OOB);
+            if ($bytes == 0){
+                $this->disConnect($socket);
+            } else {
+                if (!$this->handshake){
+                    $this->doHandShake($socket, $buffer);
+                } else {
+                    $buffer = $this->decode($buffer);
+                    $this->send($socket, $buffer); 
+                }
+            }
+        }            
 	}
 	
 	function send($client, $msg)
 	{
 		$this->log("> " . $msg);
 		$msg = $this->frame($msg);
-		socket_write($client, $msg, strlen($msg));
+		fwrite($client, $msg, strlen($msg));
 		$this->log("! " . strlen($msg));
-	}
-
-	function connect($socket)
-	{
-		array_push($this->sockets, $socket);
-		$this->say("\n" . $socket . " CONNECTED!");
-		$this->say(date("Y-n-d H:i:s"));
 	}
 
 	function disConnect($socket)
 	{
-		$index = array_search($socket, $this->sockets);
-		socket_close($socket);
+		stream_socket_shutdown($socket, STREAM_SHUT_WR);
 		$this->say($socket . " DISCONNECTED!");
-		if ($index >= 0){
-			array_splice($this->sockets, $index, 1); 
-		}
 	}
 
 	function doHandShake($socket, $buffer)
@@ -87,7 +46,7 @@ class WS
 					"Connection: Upgrade\r\n" .
 					"Sec-WebSocket-Accept: " . $this->calcKey($key) . "\r\n\r\n";  //必须以两个回车结尾
 		$this->log($upgrade);
-		$sent = socket_write($socket, $upgrade, strlen($upgrade));
+		$sent = fwrite($socket, $upgrade, strlen($upgrade));
 		$this->handshake=true;
 		$this->log("Done handshaking...");
 		return true;
@@ -159,6 +118,3 @@ class WS
 		} 
 	}
 }
-	
-
-new WS('localhost', 4000);
