@@ -14,20 +14,21 @@
  */
 
 echo "问题：请使用php完善以下抽奖算法<br>算法 概率";
-function get_rand($proArr) { 
-    $result = '';  
+function get_rand($proArr) 
+{ 
     $proSum = array_sum($proArr);  
 
     //No.1
     //开始写代码，在下面这段空白处实现上述功能。
-    foreach 
-
-
-
-
-
-
-
+    foreach ($proArr as $k => $v) {
+        $tmpRand = rand(1, $proSum);
+        if ($tmpRand <= $v) {
+            $result = $k;
+            break;
+        } else {
+            $proSum -= $v;
+        }
+    } 
     //end_code 
     return $result; 
 } 
